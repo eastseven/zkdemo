@@ -1,0 +1,10 @@
+<?page title="" contentType="text/html;charset=UTF-8"?>
+<zk>
+
+	<div>管理后台</div>
+	<hlayout
+		style="text-align: right; vertical-align: top; padding-right: 10px;">
+		<a>退出系统</a>
+		<a>修改密码</a>
+	</hlayout>
+</zk>

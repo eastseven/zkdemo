@@ -1,0 +1,32 @@
+<?page title="Index" contentType="text/html;charset=UTF-8"?>
+<zk>
+	<window width="100%" height="100%" border="normal">
+		<menubar>
+			<menuitem label="退出系统" />
+			<menuitem label="修改密码" />
+		</menubar>
+		<borderlayout width="100%" height="100%"
+			apply="org.dongq.demo.zk.IndexComposer">
+			<west width="20%" collapsible="true" splittable="true"
+				autoscroll="true">
+				<tree model="${menu}" id="menu">
+					<treecols>
+						<treecol label="菜单" />
+					</treecols>
+				</tree>
+			</west>
+			<center>
+				<tabbox id="centerTabbox">
+					<tabs>
+						<tab label="首页" />
+					</tabs>
+					<tabpanels>
+						<tabpanel>
+							<include src="grid.zul" />
+						</tabpanel>
+					</tabpanels>
+				</tabbox>
+			</center>
+		</borderlayout>
+	</window>
+</zk>
