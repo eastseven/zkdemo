@@ -1,0 +1,25 @@
+<?page title="login" contentType="text/html;charset=UTF-8"?>
+<zk>
+	<window title="login" border="normal" width="300px" apply="org.dongq.demo.zk.LoginComposer" id="login"
+		closable="true">
+		<grid>
+			<columns>
+				<column align="right" />
+				<column align="left" width="200px"/>
+			</columns>
+			<rows>
+				<row>
+					<label value="用户名" />
+					<textbox id="username" name="j_username" constraint="no empty"/>
+				</row>
+				<row>
+					<label value="密 码" />
+					<textbox id="password" type="password" name="j_password" constraint="no empty"/>
+				</row>
+				<row>
+					<label value=""/><button label="登录" id="submit"/>
+				</row>
+			</rows>
+		</grid>
+	</window>
+</zk>

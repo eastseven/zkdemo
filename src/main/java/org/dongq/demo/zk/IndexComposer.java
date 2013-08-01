@@ -2,20 +2,27 @@ package org.dongq.demo.zk;
 
 import java.util.List;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EntityUtils;
+import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.SelectEvent;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zul.AbstractTreeModel;
-import org.zkoss.zul.Borderlayout;
 import org.zkoss.zul.Tabbox;
 import org.zkoss.zul.Tree;
 import org.zkoss.zul.Treeitem;
 import org.zkoss.zul.TreeitemRenderer;
+import org.zkoss.zul.Window;
+import org.zkoss.zul.Window.Mode;
 
 import com.google.common.collect.Lists;
 
-public class IndexComposer extends SelectorComposer<Borderlayout> {
+public class IndexComposer extends SelectorComposer<Window> {
 
 	private static final long serialVersionUID = 1L;
 
@@ -26,23 +33,56 @@ public class IndexComposer extends SelectorComposer<Borderlayout> {
 	Tabbox centerTabbox;
 
 	@Override
-	public void doAfterCompose(Borderlayout comp) throws Exception {
+	public void doAfterCompose(Window comp) throws Exception {
 		super.doAfterCompose(comp);
 
+		Object realName = this.getPage().getDesktop().getSession().getAttribute("realName");
+		System.out.println("index realname= "+realName);
+		if(realName == null) {
+			Window login = (Window) Executions.createComponents("login.zul", comp, null);
+			login.setMode(Mode.MODAL);
+		} else {
+			initWindow();
+		}
+		
+	}
+
+	void initWindow() {
+		initMenuTree();
 		MenuTreeItemRender renderer = new MenuTreeItemRender();
 		MenuTreeModel model = new MenuTreeModel(getMenuTree());
 		menuTree.setModel(model);
 		menuTree.setItemRenderer(renderer);
 		
 		menuTree.addEventListener("onSelect", new EventListener<SelectEvent<Tree, SysMenu>>(){
-
+			
 			public void onEvent(SelectEvent<Tree, SysMenu> event) throws Exception {
 				System.out.println("onSelect=" + event.getName() + ", " + event.getSelectedObjects().iterator().next().getMenuName());
 			}
 			
 		});
+		
 	}
-
+	
+	void initMenuTree() {
+		final String uri = "http://192.168.1.100:9527/quickride/html/menu/?m=indexShow";
+		DefaultHttpClient httpclient = new DefaultHttpClient();
+		HttpGet httpGet = new HttpGet(uri);
+		try {
+			HttpResponse response1 = httpclient.execute(httpGet);
+		    System.out.println(response1.getStatusLine());
+		    HttpEntity entity1 = response1.getEntity();
+		    System.out.println("initMenuTree="+EntityUtils.toString(entity1));
+		    // do something useful with the response body
+		    // and ensure it is fully consumed
+		    EntityUtils.consume(entity1);
+		} catch(Exception e) {
+			e.printStackTrace();
+		} finally {
+		    httpGet.releaseConnection();
+		}
+	}
+	
 	SysMenu getMenuTree() {
 		SysMenu root = new SysMenu();
 		root.setMenuLevel(-1);
