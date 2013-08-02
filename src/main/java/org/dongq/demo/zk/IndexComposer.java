@@ -1,19 +1,31 @@
 package org.dongq.demo.zk;
 
+import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.util.EntityUtils;
+import org.zkoss.json.JSONArray;
+import org.zkoss.json.JSONObject;
+import org.zkoss.json.parser.JSONParser;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.event.EventListener;
 import org.zkoss.zk.ui.event.SelectEvent;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zul.AbstractTreeModel;
+import org.zkoss.zul.Include;
+import org.zkoss.zul.Tab;
 import org.zkoss.zul.Tabbox;
+import org.zkoss.zul.Tabpanel;
+import org.zkoss.zul.Tabpanels;
+import org.zkoss.zul.Tabs;
 import org.zkoss.zul.Tree;
 import org.zkoss.zul.Treeitem;
 import org.zkoss.zul.TreeitemRenderer;
@@ -30,8 +42,14 @@ public class IndexComposer extends SelectorComposer<Window> {
 	Tree menuTree;
 
 	@Wire("#centerTabbox")
-	Tabbox centerTabbox;
+	Tabbox tabbox;
 
+	@Wire("#centerTabs")
+	Tabs tabs;
+	
+	@Wire("#centerTabpanels")
+	Tabpanels tabpanels;
+	
 	@Override
 	public void doAfterCompose(Window comp) throws Exception {
 		super.doAfterCompose(comp);
@@ -48,39 +66,109 @@ public class IndexComposer extends SelectorComposer<Window> {
 	}
 
 	void initWindow() {
-		initMenuTree();
+		SysMenu root = initMenuTree();
 		MenuTreeItemRender renderer = new MenuTreeItemRender();
-		MenuTreeModel model = new MenuTreeModel(getMenuTree());
+		MenuTreeModel model = new MenuTreeModel(root);
 		menuTree.setModel(model);
 		menuTree.setItemRenderer(renderer);
 		
 		menuTree.addEventListener("onSelect", new EventListener<SelectEvent<Tree, SysMenu>>(){
 			
 			public void onEvent(SelectEvent<Tree, SysMenu> event) throws Exception {
-				System.out.println("onSelect=" + event.getName() + ", " + event.getSelectedObjects().iterator().next().getMenuName());
+				SysMenu menu = event.getSelectedObjects().iterator().next();
+				System.out.println("onSelect=" + event.getName() + ", " + menu.getMenuName());
+				if(StringUtils.isNotBlank(menu.getUrl())) {
+					String compId = "tab-"+menu.getId();
+					boolean hasFellow = tabs.hasFellow(compId);
+					if(hasFellow) {
+						Tab tab = (Tab) tabs.getFellow(compId);
+						tab.setSelected(true);
+					} else {
+						Tab tab = new Tab(menu.getMenuName());
+						tab.setId(compId);
+						tab.setClosable(true);
+						tab.setSelected(true);
+						tabs.appendChild(tab);
+						
+						Include include = new Include("menu.zul");
+						Tabpanel tabpanel = new Tabpanel();
+						tabpanel.appendChild(include);
+						tabpanels.appendChild(tabpanel);
+					}
+				}
 			}
 			
 		});
 		
 	}
 	
-	void initMenuTree() {
+	SysMenu initMenuTree() {
+		JSONParser jsonParser = new JSONParser();
+		SysMenu root = new SysMenu();
+		root.setMenuLevel(-1);
+		
+		Object sessionId = this.getPage().getDesktop().getSession().getAttribute("sessionId");
 		final String uri = "http://192.168.1.100:9527/quickride/html/menu/?m=indexShow";
 		DefaultHttpClient httpclient = new DefaultHttpClient();
 		HttpGet httpGet = new HttpGet(uri);
+		Header header = new BasicHeader("Cookie", "JSESSIONID="+sessionId.toString());
+		httpGet.setHeader(header);
+		System.out.println("sessionId="+sessionId);
 		try {
 			HttpResponse response1 = httpclient.execute(httpGet);
 		    System.out.println(response1.getStatusLine());
 		    HttpEntity entity1 = response1.getEntity();
-		    System.out.println("initMenuTree="+EntityUtils.toString(entity1));
-		    // do something useful with the response body
-		    // and ensure it is fully consumed
+		    final String jsonString = EntityUtils.toString(entity1);
+		    System.out.println("initMenuTree="+jsonString);
 		    EntityUtils.consume(entity1);
+		    
+		    JSONObject json = (JSONObject) jsonParser.parse(jsonString);
+		    JSONArray result = (JSONArray) json.get("result");
+ 			System.out.println("json: "+result.getClass());
+ 			for (Iterator<Object> iter = result.iterator(); iter.hasNext();) {
+				JSONObject menuJson = (JSONObject) iter.next();
+				long id = Long.valueOf(menuJson.get("id").toString());
+				String menuName = String.valueOf(menuJson.get("menuName"));
+				int orderNo = Integer.valueOf(menuJson.get("orderNo").toString());
+				int menuLevel = Integer.valueOf(menuJson.get("menuLevelOriginal").toString());
+				SysMenu menu = new SysMenu(id, menuName, orderNo, menuLevel);
+				root.getChildMenus().add(menu);
+				
+				if(menuLevel == 1) {
+					httpGet = new HttpGet(uri+"&parentId="+id);
+					httpGet.setHeader(header);
+					HttpResponse resp = httpclient.execute(httpGet);
+					
+					HttpEntity ent = resp.getEntity();
+					String sub = EntityUtils.toString(ent);
+					System.out.println("sub menu: "+sub);
+					
+					JSONObject _json = (JSONObject) jsonParser.parse(sub);
+					JSONArray _result = (JSONArray) _json.get("result");
+					for (Iterator<Object> _iter = _result.iterator(); _iter.hasNext();) {
+						JSONObject subMenuJson = (JSONObject) _iter.next();
+						long _id = Long.valueOf(subMenuJson.get("id").toString());
+						String _menuName = String.valueOf(subMenuJson.get("menuName"));
+						int _orderNo = Integer.valueOf(subMenuJson.get("orderNo").toString());
+						int _menuLevel = Integer.valueOf(subMenuJson.get("menuLevelOriginal").toString());
+						String _url = String.valueOf(subMenuJson.get("url"));
+						SysMenu subMenu = new SysMenu(_id, _menuName, _orderNo, _menuLevel);
+						subMenu.setUrl(_url);
+						menu.setParent(menu);
+						menu.getChildMenus().add(subMenu);
+					}
+					
+					EntityUtils.consume(ent);
+				}
+				
+			}
 		} catch(Exception e) {
 			e.printStackTrace();
 		} finally {
 		    httpGet.releaseConnection();
 		}
+		
+		return root;
 	}
 	
 	SysMenu getMenuTree() {
@@ -167,6 +255,14 @@ public class IndexComposer extends SelectorComposer<Window> {
 		private List<SysMenu> childMenus = Lists.newArrayList();
 
 		public SysMenu() {}
+
+		public SysMenu(Long id, String menuName, Integer orderNo, Integer menuLevel) {
+			super();
+			this.id = id;
+			this.menuName = menuName;
+			this.orderNo = orderNo;
+			this.menuLevel = menuLevel;
+		}
 
 		public SysMenu(String menuName, Integer menuLevel) {
 			super();

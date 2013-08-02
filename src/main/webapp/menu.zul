@@ -1,0 +1,21 @@
+<?page title="菜单管理" contentType="text/html;charset=UTF-8"?>
+<zk>
+	<grid apply="org.dongq.demo.zk.MenuGridComposer" mold="paging">
+		<columns>
+			<column label="名称" />
+			<column label="访问链接" />
+			<column label="显示顺序" />
+			<column label="菜单级别" />
+			<column label="父菜单" />
+		</columns>
+		<template name="model">
+			<row>
+				<label value="${each.}" />
+				<label value="${each.}" />
+				<label value="${each.}" />
+				<label value="${each.}" />
+				<label value="${each.}" />
+			</row>
+		</template>
+	</grid>
+</zk>

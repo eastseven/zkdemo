@@ -17,10 +17,10 @@
 			</west>
 			<center>
 				<tabbox id="centerTabbox">
-					<tabs>
+					<tabs id="centerTabs">
 						<tab label="首页" />
 					</tabs>
-					<tabpanels>
+					<tabpanels id="centerTabpanels">
 						<tabpanel>
 							<include src="grid.zul" />
 						</tabpanel>

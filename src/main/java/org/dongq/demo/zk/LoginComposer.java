@@ -8,6 +8,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.cookie.Cookie;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
@@ -63,6 +64,10 @@ public class LoginComposer extends SelectorComposer<Window> {
 			// and ensure it is fully consumed
 			EntityUtils.consume(entity2);
 			
+			for (Cookie c : httpclient.getCookieStore().getCookies()) {
+				System.out.println("cookie= " + c);
+			}
+			
 			login.onClose();
 			
 			post.releaseConnection();
@@ -72,6 +77,7 @@ public class LoginComposer extends SelectorComposer<Window> {
  			System.out.println("json: "+message.get("realName"));
  			
  			this.getPage().getDesktop().getSession().setAttribute("realName", message.get("realName"));
+ 			this.getPage().getDesktop().getSession().setAttribute("sessionId", message.get("sessionId"));
  			Executions.sendRedirect("index.zul");
 		} catch (Exception e) {
 			e.printStackTrace();
