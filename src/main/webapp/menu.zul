@@ -1,29 +1,32 @@
 <?page title="菜单管理" contentType="text/html;charset=UTF-8"?>
 <zk>
-	<menubar>
-		<menuitem label="新增" image=""/>
-		<menuitem label="修改" />
-		<menuitem label="查看" />
-		<menuitem label="删除" />
-		<menuitem label="刷新" />
-		<menuitem label="查询" />
-	</menubar>
-	<grid apply="org.dongq.demo.zk.MenuGridComposer" mold="paging">
-		<columns>
-			<column label="名称" />
-			<column label="访问链接" />
-			<column label="显示顺序" />
-			<column label="菜单级别" />
-			<column label="父菜单" />
-		</columns>
-		<template name="model">
-			<row>
-				<label value="${each.menuName}" />
-				<label value="${each.url}" />
-				<label value="${each.orderNo}" />
-				<label value="${each.menuLevel}" />
-				<label value="${each.parentName}" />
-			</row>
-		</template>
-	</grid>
+	<div apply="org.dongq.demo.zk.MenuGridComposer">
+		<menubar>
+			<menuitem label="新增" id=""/>
+			<menuitem label="修改" />
+			<menuitem label="查看" />
+			<menuitem label="删除" />
+			<menuitem label="刷新" />
+			<menuitem label="查询" />
+		</menubar>
+		<grid id="menuGrid">
+			<columns>
+				<column label="名称" />
+				<column label="访问链接" />
+				<column label="显示顺序" />
+				<column label="菜单级别" />
+				<column label="父菜单" />
+			</columns>
+			<template name="model">
+				<row>
+					<label value="${each.menuName}" />
+					<label value="${each.url}" />
+					<label value="${each.orderNo}" />
+					<label value="${each.menuLevel}" />
+					<label value="${each.parentName}" />
+				</row>
+			</template>
+		</grid>
+		<paging id="menuPaging" pageSize="17" detailed="true" />
+	</div>
 </zk>

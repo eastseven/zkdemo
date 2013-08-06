@@ -3,47 +3,74 @@ package org.dongq.demo.zk;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.http.Header;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicHeader;
-import org.apache.http.util.EntityUtils;
 import org.zkoss.json.JSONArray;
 import org.zkoss.json.JSONObject;
 import org.zkoss.json.parser.JSONParser;
-import org.zkoss.zk.ui.util.GenericForwardComposer;
+import org.zkoss.zk.ui.event.Event;
+import org.zkoss.zk.ui.event.EventListener;
+import org.zkoss.zk.ui.select.SelectorComposer;
+import org.zkoss.zk.ui.select.annotation.Wire;
+import org.zkoss.zul.Div;
 import org.zkoss.zul.Grid;
 import org.zkoss.zul.ListModel;
+import org.zkoss.zul.Paging;
 import org.zkoss.zul.event.ListDataListener;
+import org.zkoss.zul.event.PagingEvent;
 
 import com.google.common.collect.Lists;
 
-public class MenuGridComposer extends GenericForwardComposer<Grid> {
+public class MenuGridComposer extends SelectorComposer<Div> {
 
 	private static final long serialVersionUID = 1L;
 
+	String sessionid;
+	JSONParser jsonParser = new JSONParser();
+	
+	@Wire("#menuPaging")
+	Paging menuPaging;
+	
+	@Wire("menuGrid")
+	Grid menuGrid;
+	
 	@Override
-	public void doAfterCompose(Grid comp) throws Exception {
+	public void doAfterCompose(Div comp) throws Exception {
 		super.doAfterCompose(comp);
-		Object sessionId = this.getPage().getDesktop().getSession().getAttribute("sessionId");
-		final String uri = "http://192.168.1.100:9527/quickride/html/menu/?m=index&page_pageSize=150&page_pageNo=1&page_orderBy=id";
-		DefaultHttpClient httpclient = new DefaultHttpClient();
-		HttpGet httpGet = new HttpGet(uri);
-		Header header = new BasicHeader("Cookie", "JSESSIONID="+sessionId.toString());
-		httpGet.setHeader(header);
-
-		HttpResponse resp = httpclient.execute(httpGet);
-	    HttpEntity ent = resp.getEntity();
-	    final String jsonString = EntityUtils.toString(ent);
-	    System.out.println("initMenuTree="+jsonString);
-	    EntityUtils.consume(ent);
+	    
+		Object session = this.getPage().getDesktop().getSession().getAttribute("sessionId");
+		sessionid = session != null ? session.toString() : "";
 		
-	    List<SysMenu> menus = Lists.newArrayList();
-	    JSONParser jsonParser = new JSONParser();
+		int pageNo = 1;
+		int pageSize = menuPaging.getPageSize();
+		Page<SysMenu> page = getMenus(pageSize, pageNo);
+		List<SysMenu> menus = page.getResult();
+		int pageTotal = page.getTotalCount();
+
+		System.out.println("paging="+menuPaging);
+		menuPaging.setTotalSize(pageTotal);
+		menuPaging.addEventListener("onPaging", new EventListener<Event>() {
+			public void onEvent(Event event) throws Exception {
+				PagingEvent pge = (PagingEvent) event;
+				System.out.println("onPagingEvent: activePage="+pge.getActivePage());
+				List<SysMenu> menus = getMenus(menuPaging.getPageSize(), pge.getActivePage()+1).getResult();
+				menuGrid.setModel(new SysMenuListModel(menus));
+			}
+		});
+		
+		ListModel<SysMenu> model = new SysMenuListModel(menus);
+		menuGrid.setModel(model);
+	}
+	
+	Page<SysMenu> getMenus(int pageSize, int pageNo) throws Exception {
+		Page<SysMenu> page = new Page<SysMenu>(pageSize);
+		List<SysMenu> menus = Lists.newArrayList();
+		int totalCount = 0;
+		
+		final String uri = "http://192.168.1.100:9527/quickride/html/menu/?m=index&page_pageSize="+pageSize+"&page_pageNo="+pageNo+"&page_orderBy=id";
+	    final String jsonString = HttpClientUtils.getJson(sessionid, uri, HttpClientUtils.METHOD_GET);
+		
+	    jsonParser = new JSONParser();
 	    JSONObject json = (JSONObject) jsonParser.parse(jsonString);
-	    int pgsz = 15;
+	    totalCount = Integer.valueOf(json.get("totalCount").toString());
 	    JSONArray result = (JSONArray) json.get("result");
 	    for (Iterator<Object> iter = result.iterator(); iter.hasNext();) {
 			JSONObject object = (JSONObject) iter.next();
@@ -52,11 +79,10 @@ public class MenuGridComposer extends GenericForwardComposer<Grid> {
 			if(object.containsKey("url")) menu.setUrl(object.get("url").toString());
 			menus.add(menu);
 		}
-	    
-		ListModel<SysMenu> model = new SysMenuListModel(menus);
-		comp.setModel(model);
-		
-		comp.setPageSize(pgsz);
+		page.setResult(menus);
+		page.setPageNo(pageNo);
+		page.setTotalCount(totalCount);
+		return page;
 	}
 	
 	class SysMenuListModel implements ListModel<SysMenu> {
